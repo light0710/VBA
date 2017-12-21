@@ -1,0 +1,259 @@
+
+Dim wb As Workbook
+
+Sub GetDataFromSourceFile2()
+
+Dim i, j, intSourceRowCount As Integer
+
+
+    Set wb = ThisWorkbook
+' open source file
+
+    objfile = Application.GetOpenFilename(fileFilter:="All Files (* . *) , * . * ")   ' browse function
+
+    If objfile = False Then
+        Exit Sub
+    End If
+
+    Set cursheet = ActiveSheet
+    Set mworkbook = Workbooks.Open(objfile)
+
+
+
+' add new sheet (tmpTabData) to get tab names and add underscores to names to search source files
+
+    wb.Worksheets.Add After:=wb.Worksheets(wb.Worksheets.Count)
+    wb.Worksheets(wb.Worksheets.Count).Activate
+    wb.Worksheets(wb.Worksheets.Count).Name = "tmpTabData"
+   
+    For i = 1 To wb.Worksheets.Count
+        Range("A" & i).Select
+        ActiveCell.FormulaR1C1 = wb.Worksheets(i).Name
+        Range("B" & i).Select
+        ActiveCell.FormulaR1C1 = "=SUBSTITUTE(RC[-1],"" "",""_"")"
+    Next i
+    
+    Dim TabData, SourceData As Worksheet
+    
+    
+    Set TabData = wb.Worksheets("tmpTabData")
+    
+' add tab for source data
+
+    wb.Worksheets.Add After:=wb.Worksheets(wb.Worksheets.Count)
+    wb.Worksheets(wb.Worksheets.Count).Select
+    wb.Worksheets(wb.Worksheets.Count).Name = "tmpSourceData"
+    
+    Set SourceData = wb.Worksheets("tmpSourceData")
+    
+
+    
+    i = 1
+    j = 1
+' pull data from source file and transpose it on the tmpsourcedata tab
+
+    Do Until mworkbook.Sheets(1).Cells(j, i).Value = ""
+        Do Until mworkbook.Sheets(1).Cells(j, i).Value = ""
+'            MsgBox mworkbook.Sheets(1).Cells(j, i).Value
+            If IsNumeric(mworkbook.Sheets(1).Cells(j, i).Value) And i <> 1 Then
+                SourceData.Cells(i, j).Value = mworkbook.Sheets(1).Cells(j, i).Value
+            Else
+                SourceData.Cells(i, j).Value = mworkbook.Sheets(1).Cells(j, i).Value
+            End If
+            j = j + 1
+        Loop
+        j = 1
+        i = i + 1
+    Loop
+    
+    intSourceRowCount = i - 1
+    
+    SourceData.Columns("A:A").Select
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    
+    Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Tab"
+    Range("A2").Select
+    ActiveCell.FormulaR1C1 = "=LEFT(RC[1],FIND(""_"",RC[1])-1)"
+    Range("A2").Select
+    Selection.AutoFill Destination:=Range("A2:A" & intSourceRowCount)
+    Range("A2:A" & intSourceRowCount).Select
+    Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Range("A1").Select
+
+
+    '''''''''''''''''''''''''''''''''''''''''
+    
+    
+    
+    
+    
+' put the new data in that tab
+    
+Dim strTabNameSpaces As String
+Dim strTabNameUnderscores As String
+
+    i = 1
+    j = 1
+
+    Do Until TabData.Cells(i, 2).Value = "tmpTabData"
+        strTabNameSpaces = TabData.Cells(i, 1).Value
+        strTabNameUnderscores = TabData.Cells(i, 2).Value
+        Do Until SourceData.Cells(j, 1).Value = ""
+            If SourceData.Cells(j, 1).Value = strTabNameSpaces Then
+                GetTabData strTabNameSpaces
+            End If
+            j = j + 1
+        Loop
+        j = 1
+        i = i + 1
+    Loop
+
+' delete temporary tabs and close source file
+
+Application.DisplayAlerts = False
+On Error Resume Next
+
+    mworkbook.Close 'False
+    TabData.Delete 'False
+    SourceData.Delete 'False
+
+Application.DisplayAlerts = True
+
+wb.Worksheets("Scorecard").Activate
+
+    
+    wb.Save
+    
+'Exit Sub
+
+End Sub
+
+Sub GetTabData(NameSpaces As String)
+
+Dim i, j, k As Integer
+Dim blnFound As Boolean
+
+
+'MsgBox NameSpaces
+
+    wb.Worksheets(NameSpaces).Activate
+       
+    Cells(1, 10).Value = WorksheetFunction.Concat("Q", Right(wb.Worksheets("tmpSourceData").Cells(1, 3), 1), " ", Left(wb.Worksheets("tmpSourceData").Cells(1, 3), 4))
+    Cells(1, 10).NumberFormat = "0"
+    Cells(1, 11).Value = WorksheetFunction.Concat("Q", Right(wb.Worksheets("tmpSourceData").Cells(1, 4), 1), " ", Left(wb.Worksheets("tmpSourceData").Cells(1, 4), 4))
+    Cells(1, 11).NumberFormat = "0"
+    Cells(1, 12).Value = WorksheetFunction.Concat("Q", Right(wb.Worksheets("tmpSourceData").Cells(1, 5), 1), " ", Left(wb.Worksheets("tmpSourceData").Cells(1, 5), 4))
+    Cells(1, 12).NumberFormat = "0"
+    Cells(1, 13).Value = WorksheetFunction.Concat("Q", Right(wb.Worksheets("tmpSourceData").Cells(1, 6), 1), " ", Left(wb.Worksheets("tmpSourceData").Cells(1, 6), 4))
+    Cells(1, 13).NumberFormat = "0"
+    Cells(1, 14).Value = WorksheetFunction.Concat("Q", Right(wb.Worksheets("tmpSourceData").Cells(1, 7), 1), " ", Left(wb.Worksheets("tmpSourceData").Cells(1, 7), 4))
+    Cells(1, 14).NumberFormat = "0"
+    
+    
+    i = 2
+    j = 1
+    k = 3
+Dim strRowName As String
+
+    Do Until wb.Worksheets("tmpSourceData").Cells(j, 1).Value = ""
+        If wb.Worksheets("tmpSourceData").Cells(j, 1).Value = NameSpaces Then
+            strRowName = Replace(Right(wb.Worksheets("tmpSourceData").Cells(j, 2).Value, Len(wb.Worksheets("tmpSourceData").Cells(j, 2).Value) - Len(NameSpaces)), "_", " ")
+            Cells(i, 9) = Trim(strRowName)
+            Do Until wb.Worksheets("tmpSourceData").Cells(j, k).Value = ""
+                Cells(i, k + 7) = wb.Worksheets("tmpSourceData").Cells(j, k).Value
+                Cells(i, k + 7).Select
+
+                Select Case Cells(i, k + 7)
+
+
+                    Case 0 To 31
+                        With Cells(i, k + 7)
+                            .Interior.Color = vbRed
+                            .Font.Color = vbWhite
+                        End With
+
+                    Case 31 To 100
+                        With Cells(i, k + 7)
+                            .Interior.Color = vbYellow
+                            .Font.Color = vbBlack
+                        End With
+                        
+                End Select
+
+                k = k + 1
+            Loop
+            k = 3
+            i = i + 1
+        End If
+        j = j + 1
+    Loop
+
+
+
+
+    i = 2
+    j = 2
+    blnFound = False
+Dim strRowName2 As String
+Dim strRowName3 As String
+
+' Following wired data
+
+    Do Until wb.Worksheets("MACRO EXECUTION2").Cells(j, 1).Value = ""
+        If wb.Worksheets("MACRO EXECUTION2").Cells(j, 1).Value = NameSpaces And wb.Worksheets("MACRO EXECUTION2").Cells(j, 3).Value <> "" Then
+            Cells(1, 7).Value = "Vlookup from Wired"
+            strRowName2 = CStr(wb.Worksheets("MACRO EXECUTION2").Cells(j, 3).Value)
+            Do Until Cells(i, 1).Value = ""
+                On Error Resume Next
+                Cells(i, 7).Value = WorksheetFunction.VLookup(Cells(i, 1), wb.Worksheets(strRowName2).Columns("A:F"), 6, False)
+                If Err.Number = 1004 Then
+                    Cells(i, 7).Value = "N/A"
+                End If
+                On Error GoTo 0
+                Cells(i, 7).Select
+                Selection.Style = "Percent"
+                Selection.NumberFormat = "0%"
+                i = i + 1
+            Loop
+            blnFound = True
+        End If
+        
+' Subgroup calculation
+        
+        If wb.Worksheets("MACRO EXECUTION2").Cells(j, 1).Value = NameSpaces And wb.Worksheets("MACRO EXECUTION2").Cells(j, 4).Value <> "" Then
+            Cells(1, 7).Value = "Calculate from Wired"
+            strRowName3 = CStr(wb.Worksheets("MACRO EXECUTION2").Cells(j, 4).Value)
+            Cells(2, 7).Value = wb.Worksheets(strRowName3).Cells(2, 6).Value
+            Cells(3, 7).Value = wb.Worksheets(strRowName3).Cells(3, 6).Value + wb.Worksheets(strRowName3).Cells(4, 6).Value
+            Cells(4, 7).Value = wb.Worksheets(strRowName3).Cells(5, 6).Value + wb.Worksheets(strRowName3).Cells(6, 6).Value
+            Columns("G").Select
+            Selection.Style = "Percent"
+            Selection.NumberFormat = "0%"
+            i = i + 1
+        End If
+                
+        j = j + 1
+    Loop
+
+        
+' update macro execution tab
+    i = 2
+    blnFound = False
+    
+    Do Until blnFound Or wb.Worksheets("MACRO EXECUTION2").Cells(i, 1).Value = ""
+        If NameSpaces = wb.Worksheets("MACRO EXECUTION2").Cells(i, 1).Value Then
+            wb.Worksheets("MACRO EXECUTION2").Cells(i, 2).Value = Now()
+            blnFound = True
+        End If
+        i = i + 1
+    Loop
+    
+    If Not blnFound Then
+        wb.Worksheets("MACRO EXECUTION2").Cells(i, 1).Value = NameSpaces
+        wb.Worksheets("MACRO EXECUTION2").Cells(i, 2).Value = Now()
+    End If
+
+End Sub
